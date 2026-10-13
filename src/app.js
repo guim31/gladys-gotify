@@ -30,6 +30,7 @@ import {
 import { InvalidMessageError, fromGladysMessage, fromSceneAction } from './gotify/message.js';
 import { httpRequest } from './gotify/http.js';
 import { History, SERVER_STATES } from './history.js';
+import { createFailureLog } from './log.js';
 import { Store } from './store.js';
 import { REPORT_TEXT, each, errorText, errorTexts } from './texts.js';
 import { TEST_ACTION, WIDGET_KEY, buildWidgetContent } from './widgets.js';
@@ -86,6 +87,11 @@ export function registerHandlers(gladys, options = {}) {
   let stopped = false;
   let lastStatus = null; // the last connection status published, to publish changes only
   const lastFailureEvent = new Map(); // reason → time of the last delivery_failed event
+  // Logs, at info level the lifecycle only: what this process last said of the
+  // server (null: nothing yet, or a new address), and repeated failures once.
+  let loggedState = null;
+  const statusLog = createFailureLog(logger, { recovered: 'Connection status published again' });
+  const checkLog = createFailureLog(logger, { level: 'error' });
 
   // --- Gladys side effects, never fatal --------------------------------------
 
@@ -97,8 +103,10 @@ export function registerHandlers(gladys, options = {}) {
     try {
       await gladys.setConnectionStatus(connected, message);
       lastStatus = key;
+      statusLog.ok();
     } catch (err) {
-      logger.warn(`Cannot publish the connection status: ${err.message}`);
+      // Retried at each check until it passes: one line, not one per check.
+      statusLog.fail(`Cannot publish the connection status: ${err.message}`);
     }
   }
 
@@ -128,7 +136,9 @@ export function registerHandlers(gladys, options = {}) {
       ? null
       : setTimer(() => {
           timer = null;
-          check().catch((err) => logger.error('Health check failed', err));
+          check()
+            .then(() => checkLog.ok())
+            .catch((err) => checkLog.fail('Health check failed', err));
         }, delay);
     timer?.unref?.();
   }
@@ -146,11 +156,35 @@ export function registerHandlers(gladys, options = {}) {
     // Transitions only: the first state known after an installation or a new
     // address is not news.
     if (previous === SERVER_STATES.ONLINE && state === SERVER_STATES.OFFLINE) {
-      logger.warn(`Gotify is offline: ${error?.message}`);
       await fire(TRIGGERS.OFFLINE, { error: errorText(error, config.language) });
     } else if (previous === SERVER_STATES.OFFLINE && state === SERVER_STATES.ONLINE) {
-      logger.info(`Gotify is back online (version ${version})`);
       await fire(TRIGGERS.ONLINE, { version: version ?? '' });
+    }
+  }
+
+  /**
+   * One line when this process first knows the state of the server, then one
+   * per change, whatever was persisted: a restart says where it stands, and a
+   * server down for days writes nothing at each check.
+   */
+  function logServerState(state, { version, error }) {
+    if (state === loggedState) {
+      return;
+    }
+    const first = loggedState === null;
+    loggedState = state;
+    if (state === SERVER_STATES.ONLINE) {
+      logger.info(
+        first
+          ? `Connected to Gotify (version ${version})`
+          : `Gotify is back online (version ${version})`,
+      );
+    } else {
+      logger.warn(
+        first
+          ? `Gotify does not answer: ${error?.message}`
+          : `Gotify is offline: ${error?.message}`,
+      );
     }
   }
 
@@ -174,6 +208,7 @@ export function registerHandlers(gladys, options = {}) {
       failures = 0;
       await setServerState(SERVER_STATES.ONLINE, { version, address, current });
       if (current === generation) {
+        logServerState(SERVER_STATES.ONLINE, { version });
         await publishStatus(true);
       }
     } catch (err) {
@@ -185,6 +220,7 @@ export function registerHandlers(gladys, options = {}) {
       if (failures >= 2 || history.server.state !== SERVER_STATES.ONLINE) {
         await setServerState(SERVER_STATES.OFFLINE, { error: err, address, current });
         if (current === generation) {
+          logServerState(SERVER_STATES.OFFLINE, { error: err });
           await publishStatus(false, errorTexts(err));
         }
       }
@@ -212,6 +248,7 @@ export function registerHandlers(gladys, options = {}) {
     config = normalizeConfig(raw);
     generation += 1;
     failures = 0;
+    loggedState = null; // a saved configuration says again where the server stands
     try {
       client = new GotifyClient({
         serverUrl: config.server_url,
