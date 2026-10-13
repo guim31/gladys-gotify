@@ -133,9 +133,12 @@ export function registerHandlers(gladys, options = {}) {
     timer?.unref?.();
   }
 
-  async function setServerState(state, { version, error } = {}) {
+  async function setServerState(state, { version, error, address, current }) {
     await loaded;
-    const previous = history.setServer({ state, address: fingerprint(client), version });
+    if (current !== generation) {
+      return; // the configuration changed meanwhile: this result is about another server
+    }
+    const previous = history.setServer({ state, address, version });
     if (previous === state) {
       return;
     }
@@ -159,23 +162,31 @@ export function registerHandlers(gladys, options = {}) {
       refreshWidget();
       return;
     }
+    // The client and its address are captured: applyConfig may replace them
+    // during any await below, and the generation check then drops the result.
+    const checked = client;
+    const address = fingerprint(checked);
     try {
-      const { version } = await client.check();
+      const { version } = await checked.check();
       if (current !== generation) {
         return;
       }
       failures = 0;
-      await publishStatus(true);
-      await setServerState(SERVER_STATES.ONLINE, { version });
+      await setServerState(SERVER_STATES.ONLINE, { version, address, current });
+      if (current === generation) {
+        await publishStatus(true);
+      }
     } catch (err) {
       if (current !== generation) {
         return;
       }
       failures += 1;
-      logger.debug(`Health check of ${client.description} failed: ${err.message}`);
+      logger.debug(`Health check of ${checked.description} failed: ${err.message}`);
       if (failures >= 2 || history.server.state !== SERVER_STATES.ONLINE) {
-        await publishStatus(false, errorTexts(err));
-        await setServerState(SERVER_STATES.OFFLINE, { error: err });
+        await setServerState(SERVER_STATES.OFFLINE, { error: err, address, current });
+        if (current === generation) {
+          await publishStatus(false, errorTexts(err));
+        }
       }
     } finally {
       if (current === generation) {
@@ -249,11 +260,16 @@ export function registerHandlers(gladys, options = {}) {
       return;
     }
     lastFailureEvent.set(reason, now().getTime());
-    await fire(TRIGGERS.FAILED, {
+    const event = fire(TRIGGERS.FAILED, {
       reason,
       origin,
       error: errorText(error, config.language),
     });
+    // A Gladys message is acked within 5 s: its trigger is not waited for
+    // (fire never rejects).
+    if (origin !== 'gladys_message') {
+      await event;
+    }
   }
 
   function requireClient() {
@@ -265,28 +281,35 @@ export function registerHandlers(gladys, options = {}) {
 
   /** Sends the test notification with the shared token: the action and the widget button. */
   async function testConnection() {
+    // Captured once: a configuration saved during the test must not mix servers and tokens.
+    const tested = client;
+    const settings = config;
+    const failure = configError;
     let version;
     try {
-      ({ version } = await requireClient().check());
+      if (!tested) {
+        throw failure;
+      }
+      ({ version } = await tested.check());
     } catch (err) {
       check().catch(() => {});
       return each(REPORT_TEXT, (text, lang) => text.unreachable(errorText(err, lang)));
     }
     check().catch(() => {});
     const reachable = (text) => text.reachable(version);
-    if (!config.app_token) {
+    if (!settings.app_token) {
       return each(REPORT_TEXT, (text) => `${reachable(text)} ${text.noToken}`);
     }
-    const text = REPORT_TEXT[config.language];
+    const text = REPORT_TEXT[settings.language];
     const notification = {
       title: text.title,
       message: text.message,
-      priority: config.default_priority,
+      priority: settings.default_priority,
     };
     try {
-      const sent = await client.send(
-        config.app_token,
-        fromSceneAction(notification, { ...config, markdown: false }),
+      const sent = await tested.send(
+        settings.app_token,
+        fromSceneAction(notification, { ...settings, markdown: false }),
         { timeoutMs: ACTION_TIMEOUT_MS },
       );
       await afterDelivery({ origin: 'test', delivered: true });
@@ -300,7 +323,11 @@ export function registerHandlers(gladys, options = {}) {
   // --- Handlers ----------------------------------------------------------------
 
   gladys.onSendMessage(async (contact, message) => {
-    const { appToken, priority } = normalizeContact(contact);
+    const { appToken, priority, optedIn } = normalizeContact(contact);
+    if (!optedIn) {
+      // "My account" saved with every field emptied: the user asked for nothing.
+      return;
+    }
     try {
       const payload = fromGladysMessage(message, {
         priority: priority ?? config.default_priority,

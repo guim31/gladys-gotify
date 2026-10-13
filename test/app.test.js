@@ -358,3 +358,58 @@ test('nothing secret is stored, nor logged in the connection status', async (t) 
   ]);
   assert.ok(!everything.includes('gtfy'));
 });
+
+test('a user who emptied "My account" receives nothing, not even with the shared token', async (t) => {
+  const world = await createWorld();
+  t.after(() => world.app.stop());
+  const ack = await world.fake.sendMessage({ app_token: '', priority: '' }, { text: 'private' });
+  assert.deepEqual(ack, { success: true });
+  assert.deepEqual(world.gotify.messages, []);
+  assert.equal(world.app.history.today().sent, 0);
+});
+
+test('a check of the previous server ending after a new address is ignored', async (t) => {
+  // Server A answers, server B (192.0.2.40) is down.
+  const gotify = createFakeGotify();
+  const request = async (url, options) => {
+    if (url.startsWith('http://192.0.2.40')) {
+      const error = new Error('connect ECONNREFUSED');
+      error.code = 'ECONNREFUSED';
+      throw error;
+    }
+    return gotify.request(url, options);
+  };
+  const world = await createWorld({
+    gotify: { ...gotify, request },
+    config: { ...BASE_CONFIG, server_url: 'http://192.0.2.40' },
+  });
+  t.after(() => world.app.stop());
+
+  // The check of A succeeds, then hangs while reporting to Gladys…
+  let release;
+  const original = world.gladys.setConnectionStatus.bind(world.gladys);
+  t.mock.method(world.gladys, 'setConnectionStatus', async (...args) => {
+    if (!release) {
+      await new Promise((resolve) => {
+        release = resolve;
+      });
+    }
+    return original(...args);
+  });
+  const switchToA = world.fake.configUpdated({ ...BASE_CONFIG, server_url: 'http://192.0.2.30' });
+  for (let i = 0; i < 50 && !release; i += 1) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.ok(release, 'the check of A is reporting');
+  // …while the user switches back to B.
+  const switchToB = world.fake.configUpdated({ ...BASE_CONFIG, server_url: 'http://192.0.2.40' });
+  await new Promise((resolve) => setImmediate(resolve));
+  release();
+  await Promise.all([switchToA, switchToB]);
+  await world.app.check();
+
+  assert.equal(world.app.history.server.state, SERVER_STATES.OFFLINE, 'B was never online');
+  assert.equal(world.app.history.server.version, null);
+  assert.deepEqual(world.fake.sceneEvents, []);
+  assert.equal(world.fake.connectionStatus.connected, false);
+});

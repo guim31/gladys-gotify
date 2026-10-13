@@ -67,6 +67,15 @@ export function httpRequest(
         response.on('error', reject);
       },
     );
+    // `timeout` only bounds the idle time between two packets: a server
+    // trickling its answer would keep the request alive. This one bounds it all.
+    const deadline = setTimeout(() => {
+      const error = new Error(`Timed out after ${timeoutMs} ms`);
+      error.code = 'ETIMEDOUT';
+      request.destroy(error);
+    }, timeoutMs);
+    deadline.unref?.();
+    request.on('close', () => clearTimeout(deadline));
     request.on('timeout', () => {
       const error = new Error(`Timed out after ${timeoutMs} ms`);
       error.code = 'ETIMEDOUT';

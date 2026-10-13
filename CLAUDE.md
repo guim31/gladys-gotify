@@ -195,9 +195,15 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   de la 5.2.0 : valeurs initiales `null`) et un booléen non coché y est enregistré `false`. D'où un
   `contact_schema` sans défaut ni booléen : un jeton facultatif, une priorité facultative ; il
   suffit d'enregistrer l'un des deux pour recevoir. Un `secret` laissé intact est envoyé `null`
-  (« inchangé »).
+  (« inchangé »). Mais un jeton **vidé** est enregistré `''` et le cœur relaie quand même
+  (`{ app_token: '' }` n'est pas un profil vide) : sans jeton ni priorité choisie, l'utilisateur
+  s'est désinscrit, `onSendMessage` ne fait rien (`normalizeContact().optedIn`).
+- **Course à la reconfiguration** : un contrôle de santé capture son client et son adresse, et
+  revérifie la génération après chaque `await` (dont `setConnectionStatus`) ; sinon un contrôle de
+  l'ancien serveur marquait le nouveau « en ligne » (relecture du 13/10, test dédié).
 - **L'accusé de `message.send` est attendu 5 s** (`COMMAND_TIMEOUT_MS`) : la requête vers Gotify
-  abandonne à 4 s. `text` est du Markdown (écrit par le cerveau / l'IA), `file` une image
+  abandonne à 4 s (délai total, pas seulement d'inactivité), et le déclencheur `delivery_failed`
+  d'un message n'est pas attendu. `text` est du Markdown (écrit par le cerveau / l'IA), `file` une image
   `image/jpg;base64,…` que Gotify ne peut pas porter : on l'écarte avec une ligne qui le dit.
 - **API Gotify** (vérifiée sur 3.1.1, fixtures dans `test/fixtures/gotify/`) : `POST /message`
   avec `X-Gotify-Key` ; sans `priority`, Gotify applique la priorité par défaut de l'application ;

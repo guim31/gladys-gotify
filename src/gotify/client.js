@@ -219,7 +219,12 @@ export class GotifyClient {
         `Gotify is not healthy (health ${health.health}, database ${health.database})`,
       );
     }
-    return { version: version.version, health: health.health, database: health.database };
+    // Bounded: the version is stored, shown in the widget and sent with a trigger.
+    return {
+      version: version.version.slice(0, 40),
+      health: health.health,
+      database: health.database,
+    };
   }
 
   /**

@@ -65,12 +65,20 @@ export function normalizeConfig(raw = {}) {
 /**
  * The "My account" values of one user, as Gladys hands them to onSendMessage.
  * @param {Record<string, unknown>} [contact]
- * @returns {{ appToken: string, priority: number|null }}
+ * @returns {{ appToken: string, priority: number|null, optedIn: boolean }}
  */
 export function normalizeContact(contact = {}) {
   const values = contact ?? {};
+  const appToken = trimmed(values.app_token);
+  // The core skips a user who never saved "My account", but not one who
+  // saved it with every field emptied ({ app_token: '' }): that user opted
+  // out. A chosen priority, "default" included, opts in with the shared token.
+  const chosePriority =
+    typeof values.priority === 'number' ||
+    (typeof values.priority === 'string' && values.priority.trim() !== '');
   return {
-    appToken: trimmed(values.app_token),
+    appToken,
     priority: parsePriority(values.priority),
+    optedIn: appToken !== '' || chosePriority,
   };
 }

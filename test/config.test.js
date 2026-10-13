@@ -52,7 +52,15 @@ test('the "My account" values of a user', () => {
   assert.deepEqual(normalizeContact({ app_token: ' t ', priority: '2' }), {
     appToken: 't',
     priority: 2,
+    optedIn: true,
   });
-  assert.deepEqual(normalizeContact(null), { appToken: '', priority: null });
-  assert.deepEqual(normalizeContact({ priority: 'default' }), { appToken: '', priority: null });
+  assert.deepEqual(normalizeContact({ priority: 'default' }), {
+    appToken: '',
+    priority: null,
+    optedIn: true,
+  });
+  // Saved with every field emptied: the user opted out.
+  for (const emptied of [null, {}, { app_token: '' }, { app_token: ' ', priority: '' }]) {
+    assert.equal(normalizeContact(emptied).optedIn, false, JSON.stringify(emptied));
+  }
 });
