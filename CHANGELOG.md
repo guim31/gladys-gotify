@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-13
+
 ### Added
 
 - Gotify as a Gladys notification channel: every message Gladys sends to a
@@ -28,4 +30,5 @@ the notes of the version's GitHub Release.
   that explains what to fix (address, certificate, token, client token…).
 - English, French, German and Spanish, documentation included.
 
-[Unreleased]: https://github.com/guim31/gladys-gotify/commits/main
+[Unreleased]: https://github.com/guim31/gladys-gotify/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/guim31/gladys-gotify/releases/tag/v1.0.0
