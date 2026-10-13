@@ -1,0 +1,22 @@
+{
+  "status": 200,
+  "body": {
+    "id": 8,
+    "appid": 2,
+    "message": "**Front door** opened",
+    "title": "Front door",
+    "priority": 8,
+    "extras": {
+      "client::display": {
+        "contentType": "text/markdown"
+      },
+      "client::notification": {
+        "bigImageUrl": "https://example.com/snapshot.jpg",
+        "click": {
+          "url": "https://example.com/camera"
+        }
+      }
+    },
+    "date": "2026-10-13T05:13:30.412842338Z"
+  }
+}

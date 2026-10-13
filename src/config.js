@@ -1,45 +1,76 @@
 // -----------------------------------------------------------------------------
-// Integration configuration.
-//
-// The configuration is filled in by the user in Gladys, from the `config_schema`
-// declared in `gladys-assistant-integration.json`. The SDK fetches it for you
-// (`gladys.getConfig()`) and notifies you of every change through
-// `gladys.onConfigUpdated()`.
-//
-// This module only provides defaults and normalizes the received object, so the
-// rest of the code never has to deal with `undefined`.
+// Integration configuration (the `config_schema` of the manifest) and the
+// per-user "My account" values (`contact_schema`), normalized so the rest of
+// the code never deals with `undefined`, strings typed with spaces or a
+// priority out of range.
 // -----------------------------------------------------------------------------
 
+export const LANGUAGES = ['en', 'fr', 'de', 'es'];
+
+// "default" leaves the priority out of the request: Gotify then applies the
+// default priority of the application (set in its web interface).
+export const PRIORITY_DEFAULT = 'default';
+// The values offered in the forms: one per notification level of the Gotify
+// Android app (NotificationSupport.convertPriorityToChannel: < 1 minimal,
+// 1-3 low, 4-7 normal, >= 8 high), plus the maximum.
+export const PRIORITIES = [PRIORITY_DEFAULT, '0', '2', '5', '8', '10'];
+
 // Defaults: they MUST stay consistent with the `default` values declared in the
-// `config_schema` of the manifest.
+// `config_schema` of the manifest (test/manifest.test.js).
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+  server_url: '',
+  app_token: '',
+  default_priority: PRIORITY_DEFAULT,
+  markdown: true,
+  allow_self_signed: false,
+  language: 'fr',
 };
+
+const trimmed = (value) => (typeof value === 'string' ? value.trim() : '');
+
+/**
+ * A priority as Gotify takes it: an integer from 0 to 10, or null for "the
+ * application default". Accepts the select values and plain numbers (a scene
+ * variable), clamps what is out of range.
+ * @param {unknown} value
+ * @returns {number|null}
+ */
+export function parsePriority(value) {
+  if (value === null || value === undefined || value === '' || value === PRIORITY_DEFAULT) {
+    return null;
+  }
+  const number = Number(typeof value === 'string' ? value.trim().replace(',', '.') : value);
+  if (!Number.isFinite(number)) {
+    return null;
+  }
+  return Math.min(10, Math.max(0, Math.round(number)));
+}
 
 /**
  * Merge the user config with the defaults.
- * @param {Record<string, unknown>} raw config returned by the SDK
+ * @param {Record<string, unknown>} [raw] config returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
+  const config = raw ?? {};
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    server_url: trimmed(config.server_url),
+    app_token: trimmed(config.app_token),
+    default_priority: parsePriority(config.default_priority),
+    markdown: config.markdown !== false,
+    allow_self_signed: config.allow_self_signed === true,
+    language: LANGUAGES.includes(config.language) ? config.language : DEFAULT_CONFIG.language,
+  };
+}
+
+/**
+ * The "My account" values of one user, as Gladys hands them to onSendMessage.
+ * @param {Record<string, unknown>} [contact]
+ * @returns {{ appToken: string, priority: number|null }}
+ */
+export function normalizeContact(contact = {}) {
+  const values = contact ?? {};
+  return {
+    appToken: trimmed(values.app_token),
+    priority: parsePriority(values.priority),
   };
 }

@@ -1,177 +1,761 @@
 {
   "manifest_version": 1,
-  "type": "device",
-  "name": "Demo Devices Template",
+  "type": "communication",
+  "name": "Gotify",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Gladys messages and scene notifications on your phone through your own Gotify server.",
+    "fr": "Les messages de Gladys et des notifications de scène sur votre téléphone via votre serveur Gotify.",
+    "de": "Gladys-Nachrichten und Szenen-Benachrichtigungen über deinen eigenen Gotify-Server.",
+    "es": "Mensajes de Gladys y notificaciones de escenas en su móvil a través de su servidor Gotify."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-gotify:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-gotify/main/cover.png",
+  "categories": ["notifications"],
+  "transports": ["local"],
+  "messaging": {
+    "receive": false
+  },
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Connect your Gotify server",
+        "fr": "Connecter votre serveur Gotify",
+        "de": "Deinen Gotify-Server verbinden",
+        "es": "Conectar su servidor Gotify"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "In the Gotify web interface, open the Apps tab and create an application (name it Gladys, for instance), then paste its token below. Each Gladys user can also enter their own token in the \"My account\" block.",
+        "fr": "Dans l'interface web de Gotify, ouvrez l'onglet Apps et créez une application (nommez-la Gladys, par exemple), puis collez son jeton ci-dessous. Chaque utilisateur de Gladys peut aussi saisir son propre jeton dans le bloc « Mon compte ».",
+        "de": "Öffne in der Weboberfläche von Gotify den Reiter Apps und erstelle eine Anwendung (zum Beispiel Gladys), dann füge ihr Token unten ein. Jeder Gladys-Benutzer kann im Block „Mein Konto“ auch ein eigenes Token angeben.",
+        "es": "En la interfaz web de Gotify, abra la pestaña Apps y cree una aplicación (llámela Gladys, por ejemplo) y pegue su token a continuación. Cada usuario de Gladys también puede indicar su propio token en el bloque «Mi cuenta»."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://gotify.net/docs/pushmsg",
+          "label": {
+            "en": "Gotify: push messages",
+            "fr": "Gotify : envoyer des messages",
+            "de": "Gotify: Nachrichten senden",
+            "es": "Gotify: enviar mensajes"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "server_url",
+      "type": "string",
+      "label": {
+        "en": "Gotify server address",
+        "fr": "Adresse du serveur Gotify",
+        "de": "Adresse des Gotify-Servers",
+        "es": "Dirección del servidor Gotify"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "The address you open Gotify with, port included.",
+        "fr": "L'adresse par laquelle vous ouvrez Gotify, port compris.",
+        "de": "Die Adresse, unter der du Gotify öffnest, mit Port.",
+        "es": "La dirección con la que abre Gotify, puerto incluido."
+      },
+      "placeholder": {
+        "en": "e.g. http://192.168.1.10:8080",
+        "fr": "ex. http://192.168.1.10:8080",
+        "de": "z. B. http://192.168.1.10:8080",
+        "es": "p. ej. http://192.168.1.10:8080"
+      },
+      "required": true
     },
     {
-      "key": "longitude",
-      "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "key": "app_token",
+      "type": "secret",
+      "label": {
+        "en": "Shared application token",
+        "fr": "Jeton d'application partagé",
+        "de": "Gemeinsames App-Token",
+        "es": "Token de aplicación compartido"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "Used by the scene action, the test, and the users who give no token of their own.",
+        "fr": "Utilisé par l'action de scène, le test et les utilisateurs qui n'ont pas donné leur propre jeton.",
+        "de": "Wird von der Szenenaktion, dem Test und den Benutzern ohne eigenes Token verwendet.",
+        "es": "Lo usan la acción de escena, la prueba y los usuarios que no indican su propio token."
+      },
+      "placeholder": {
+        "en": "Token of a Gotify application",
+        "fr": "Jeton d'une application Gotify",
+        "de": "Token einer Gotify-Anwendung",
+        "es": "Token de una aplicación Gotify"
+      },
+      "required": false
     },
     {
-      "key": "unit",
+      "key": "default_priority",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
+      "label": {
+        "en": "Default priority",
+        "fr": "Priorité par défaut",
+        "de": "Standardpriorität",
+        "es": "Prioridad predeterminada"
+      },
+      "description": {
+        "en": "On the Gotify Android app: below 1 silent and discreet, 1 to 3 silent, 4 to 7 with sound, 8 and above with a pop-up.",
+        "fr": "Sur l'application Android de Gotify : sous 1 silencieuse et discrète, de 1 à 3 silencieuse, de 4 à 7 avec son, 8 et plus avec un bandeau.",
+        "de": "In der Android-App von Gotify: unter 1 lautlos und unauffällig, 1 bis 3 lautlos, 4 bis 7 mit Ton, ab 8 mit Pop-up.",
+        "es": "En la aplicación Android de Gotify: por debajo de 1 silenciosa y discreta, de 1 a 3 silenciosa, de 4 a 7 con sonido, 8 o más con aviso emergente."
+      },
       "required": false,
-      "default": "celsius",
+      "default": "default",
       "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
+        {
+          "value": "default",
+          "label": {
+            "en": "Default of the Gotify application",
+            "fr": "Par défaut de l'application Gotify",
+            "de": "Standard der Gotify-App",
+            "es": "Predeterminada de la aplicación Gotify"
+          }
+        },
+        {
+          "value": "0",
+          "label": {
+            "en": "0 – Minimal, silent",
+            "fr": "0 – Minimale, silencieuse",
+            "de": "0 – Minimal, lautlos",
+            "es": "0 – Mínima, silenciosa"
+          }
+        },
+        {
+          "value": "2",
+          "label": {
+            "en": "2 – Low, silent",
+            "fr": "2 – Basse, silencieuse",
+            "de": "2 – Niedrig, lautlos",
+            "es": "2 – Baja, silenciosa"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "5 – Normal, with sound",
+            "fr": "5 – Normale, avec son",
+            "de": "5 – Normal, mit Ton",
+            "es": "5 – Normal, con sonido"
+          }
+        },
+        {
+          "value": "8",
+          "label": {
+            "en": "8 – High, sound and pop-up",
+            "fr": "8 – Haute, son et bandeau",
+            "de": "8 – Hoch, Ton und Pop-up",
+            "es": "8 – Alta, sonido y aviso emergente"
+          }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 – Maximum",
+            "fr": "10 – Maximale",
+            "de": "10 – Maximal",
+            "es": "10 – Máxima"
+          }
+        }
       ]
     },
     {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "key": "markdown",
+      "type": "boolean",
+      "label": {
+        "en": "Format messages as Markdown",
+        "fr": "Mettre en forme les messages en Markdown",
+        "de": "Nachrichten als Markdown formatieren",
+        "es": "Dar formato Markdown a los mensajes"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Gladys writes bold text, lists and links in Markdown: the Gotify apps display them.",
+        "fr": "Gladys écrit gras, listes et liens en Markdown : les applications Gotify les affichent.",
+        "de": "Gladys schreibt Fettdruck, Listen und Links in Markdown: Die Gotify-Apps zeigen sie an.",
+        "es": "Gladys escribe negritas, listas y enlaces en Markdown: las aplicaciones Gotify los muestran."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": true
+    },
+    {
+      "key": "allow_self_signed",
+      "type": "boolean",
+      "label": {
+        "en": "Accept a self-signed certificate",
+        "fr": "Accepter un certificat auto-signé",
+        "de": "Selbstsigniertes Zertifikat akzeptieren",
+        "es": "Aceptar un certificado autofirmado"
+      },
+      "description": {
+        "en": "Only for an https:// address whose certificate you created yourself.",
+        "fr": "Seulement pour une adresse en https:// dont vous avez créé le certificat vous-même.",
+        "de": "Nur für eine https://-Adresse, deren Zertifikat du selbst erstellt hast.",
+        "es": "Solo para una dirección https:// cuyo certificado haya creado usted mismo."
+      },
+      "required": false,
+      "default": false
+    },
+    {
+      "key": "language",
+      "type": "select",
+      "label": {
+        "en": "Language of the integration texts",
+        "fr": "Langue des textes de l'intégration",
+        "de": "Sprache der Texte der Integration",
+        "es": "Idioma de los textos de la integración"
+      },
+      "description": {
+        "en": "Used for the notes added to the messages and the errors of the scene action.",
+        "fr": "Pour les mentions ajoutées aux messages et les erreurs de l'action de scène.",
+        "de": "Für die Hinweise in den Nachrichten und die Fehler der Szenenaktion.",
+        "es": "Para las notas añadidas a los mensajes y los errores de la acción de escena."
+      },
+      "required": false,
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": {
+            "en": "English",
+            "fr": "Anglais",
+            "de": "Englisch",
+            "es": "Inglés"
+          }
+        },
+        {
+          "value": "fr",
+          "label": {
+            "en": "French",
+            "fr": "Français",
+            "de": "Französisch",
+            "es": "Francés"
+          }
+        },
+        {
+          "value": "de",
+          "label": {
+            "en": "German",
+            "fr": "Allemand",
+            "de": "Deutsch",
+            "es": "Alemán"
+          }
+        },
+        {
+          "value": "es",
+          "label": {
+            "en": "Spanish",
+            "fr": "Espagnol",
+            "de": "Spanisch",
+            "es": "Español"
+          }
+        }
+      ]
+    }
+  ],
+  "contact_schema": [
+    {
+      "key": "account",
+      "type": "section",
+      "label": {
+        "en": "Your Gotify notifications",
+        "fr": "Vos notifications Gotify",
+        "de": "Deine Gotify-Benachrichtigungen",
+        "es": "Sus notificaciones Gotify"
+      },
+      "description": {
+        "en": "To receive the messages Gladys sends you, enter the token of an application of YOUR Gotify account, or only choose a priority to use the shared token. Leave everything empty to receive nothing.",
+        "fr": "Pour recevoir les messages que Gladys vous envoie, saisissez le jeton d'une application de VOTRE compte Gotify, ou choisissez seulement une priorité pour utiliser le jeton partagé. Laissez tout vide pour ne rien recevoir.",
+        "de": "Um die Nachrichten von Gladys zu erhalten, gib das Token einer Anwendung DEINES Gotify-Kontos ein oder wähle nur eine Priorität, um das gemeinsame Token zu nutzen. Lass alles leer, um nichts zu erhalten.",
+        "es": "Para recibir los mensajes que Gladys le envía, indique el token de una aplicación de SU cuenta Gotify, o elija solo una prioridad para usar el token compartido. Deje todo vacío para no recibir nada."
+      }
+    },
+    {
+      "key": "app_token",
+      "type": "secret",
+      "label": {
+        "en": "Your application token",
+        "fr": "Votre jeton d'application",
+        "de": "Dein App-Token",
+        "es": "Su token de aplicación"
+      },
+      "placeholder": {
+        "en": "Empty: the shared token",
+        "fr": "Vide : le jeton partagé",
+        "de": "Leer: das gemeinsame Token",
+        "es": "Vacío: el token compartido"
+      },
+      "required": false
+    },
+    {
+      "key": "priority",
+      "type": "select",
+      "label": {
+        "en": "Priority of your messages",
+        "fr": "Priorité de vos messages",
+        "de": "Priorität deiner Nachrichten",
+        "es": "Prioridad de sus mensajes"
+      },
+      "required": false,
+      "options": [
+        {
+          "value": "default",
+          "label": {
+            "en": "Default of the integration",
+            "fr": "Par défaut de l'intégration",
+            "de": "Standard der Integration",
+            "es": "Predeterminada de la integración"
+          }
+        },
+        {
+          "value": "0",
+          "label": {
+            "en": "0 – Minimal, silent",
+            "fr": "0 – Minimale, silencieuse",
+            "de": "0 – Minimal, lautlos",
+            "es": "0 – Mínima, silenciosa"
+          }
+        },
+        {
+          "value": "2",
+          "label": {
+            "en": "2 – Low, silent",
+            "fr": "2 – Basse, silencieuse",
+            "de": "2 – Niedrig, lautlos",
+            "es": "2 – Baja, silenciosa"
+          }
+        },
+        {
+          "value": "5",
+          "label": {
+            "en": "5 – Normal, with sound",
+            "fr": "5 – Normale, avec son",
+            "de": "5 – Normal, mit Ton",
+            "es": "5 – Normal, con sonido"
+          }
+        },
+        {
+          "value": "8",
+          "label": {
+            "en": "8 – High, sound and pop-up",
+            "fr": "8 – Haute, son et bandeau",
+            "de": "8 – Hoch, Ton und Pop-up",
+            "es": "8 – Alta, sonido y aviso emergente"
+          }
+        },
+        {
+          "value": "10",
+          "label": {
+            "en": "10 – Maximum",
+            "fr": "10 – Maximale",
+            "de": "10 – Maximal",
+            "es": "10 – Máxima"
+          }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
+      "key": "test_connection",
+      "label": {
+        "en": "Send a test notification",
+        "fr": "Envoyer une notification de test",
+        "de": "Testbenachrichtigung senden",
+        "es": "Enviar una notificación de prueba"
+      },
+      "description": {
+        "en": "Checks the server, then sends a notification with the shared token.",
+        "fr": "Vérifie le serveur, puis envoie une notification avec le jeton partagé.",
+        "de": "Prüft den Server und sendet dann eine Benachrichtigung mit dem gemeinsamen Token.",
+        "es": "Comprueba el servidor y envía una notificación con el token compartido."
+      },
       "timeout_seconds": 30
-    },
-    {
-      "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
     }
   ],
   "scene_triggers": [
     {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
+      "key": "server_offline",
+      "label": {
+        "en": "Gotify server offline",
+        "fr": "Serveur Gotify hors ligne",
+        "de": "Gotify-Server offline",
+        "es": "Servidor Gotify sin conexión"
+      },
       "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+        "en": "The Gotify server stopped answering (two checks 30 seconds apart).",
+        "fr": "Le serveur Gotify ne répond plus (deux vérifications à 30 secondes d'écart).",
+        "de": "Der Gotify-Server antwortet nicht mehr (zwei Prüfungen im Abstand von 30 Sekunden).",
+        "es": "El servidor Gotify ha dejado de responder (dos comprobaciones con 30 segundos de diferencia)."
+      },
+      "variables": [
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error",
+            "fr": "Erreur",
+            "de": "Fehler",
+            "es": "Error"
+          }
+        }
+      ]
+    },
+    {
+      "key": "server_online",
+      "label": {
+        "en": "Gotify server back online",
+        "fr": "Serveur Gotify de retour",
+        "de": "Gotify-Server wieder online",
+        "es": "Servidor Gotify de nuevo en línea"
+      },
+      "description": {
+        "en": "The Gotify server answers again after being offline.",
+        "fr": "Le serveur Gotify répond de nouveau après avoir été hors ligne.",
+        "de": "Der Gotify-Server antwortet wieder, nachdem er offline war.",
+        "es": "El servidor Gotify vuelve a responder tras estar sin conexión."
+      },
+      "variables": [
+        {
+          "key": "version",
+          "type": "string",
+          "label": {
+            "en": "Gotify version",
+            "fr": "Version de Gotify",
+            "de": "Gotify-Version",
+            "es": "Versión de Gotify"
+          }
+        }
+      ]
+    },
+    {
+      "key": "delivery_failed",
+      "label": {
+        "en": "Gotify notification not sent",
+        "fr": "Notification Gotify non envoyée",
+        "de": "Gotify-Benachrichtigung nicht gesendet",
+        "es": "Notificación Gotify no enviada"
+      },
+      "description": {
+        "en": "A message could not be sent. At most once per reason every 15 minutes.",
+        "fr": "Un message n'a pas pu être envoyé. Au plus une fois par raison toutes les 15 minutes.",
+        "de": "Eine Nachricht konnte nicht gesendet werden. Höchstens einmal pro Grund alle 15 Minuten.",
+        "es": "No se ha podido enviar un mensaje. Como máximo una vez por motivo cada 15 minutos."
       },
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
+          "key": "reason",
+          "type": "multi_select",
+          "label": {
+            "en": "Reason",
+            "fr": "Raison",
+            "de": "Grund",
+            "es": "Motivo"
+          },
+          "options": [
+            {
+              "value": "unreachable",
+              "label": {
+                "en": "Server unreachable",
+                "fr": "Serveur injoignable",
+                "de": "Server nicht erreichbar",
+                "es": "Servidor inaccesible"
+              }
+            },
+            {
+              "value": "token",
+              "label": {
+                "en": "Token missing or refused",
+                "fr": "Jeton absent ou refusé",
+                "de": "Token fehlt oder abgelehnt",
+                "es": "Token ausente o rechazado"
+              }
+            },
+            {
+              "value": "configuration",
+              "label": {
+                "en": "Configuration incomplete",
+                "fr": "Configuration incomplète",
+                "de": "Konfiguration unvollständig",
+                "es": "Configuración incompleta"
+              }
+            },
+            {
+              "value": "rejected",
+              "label": {
+                "en": "Message refused",
+                "fr": "Message refusé",
+                "de": "Nachricht abgelehnt",
+                "es": "Mensaje rechazado"
+              }
+            }
+          ]
         },
         {
-          "key": "target",
+          "key": "origin",
           "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
+          "label": {
+            "en": "Sent by",
+            "fr": "Envoyé par",
+            "de": "Gesendet von",
+            "es": "Enviado por"
+          },
           "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
+            {
+              "value": "gladys_message",
+              "label": {
+                "en": "A Gladys message",
+                "fr": "Un message de Gladys",
+                "de": "Eine Gladys-Nachricht",
+                "es": "Un mensaje de Gladys"
+              }
+            },
+            {
+              "value": "scene_action",
+              "label": {
+                "en": "The Gotify scene action",
+                "fr": "L'action de scène Gotify",
+                "de": "Die Gotify-Szenenaktion",
+                "es": "La acción de escena Gotify"
+              }
+            }
           ]
         }
       ],
       "variables": [
         {
-          "key": "target",
+          "key": "reason",
           "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": {
+            "en": "Reason",
+            "fr": "Raison",
+            "de": "Grund",
+            "es": "Motivo"
+          }
+        },
+        {
+          "key": "origin",
+          "type": "string",
+          "label": {
+            "en": "Sent by",
+            "fr": "Envoyé par",
+            "de": "Gesendet von",
+            "es": "Enviado por"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error",
+            "fr": "Erreur",
+            "de": "Fehler",
+            "es": "Error"
+          }
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "send_notification",
+      "label": {
+        "en": "Send a Gotify notification",
+        "fr": "Envoyer une notification Gotify",
+        "de": "Gotify-Benachrichtigung senden",
+        "es": "Enviar una notificación Gotify"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "With a title, a priority, a link and an image, using the shared token.",
+        "fr": "Avec titre, priorité, lien et image, par le jeton partagé.",
+        "de": "Mit Titel, Priorität, Link und Bild, über das gemeinsame Token.",
+        "es": "Con título, prioridad, enlace e imagen, mediante el token compartido."
+      },
+      "timeout_seconds": 20,
       "fields": [
         {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "key": "title",
+          "type": "string",
+          "label": {
+            "en": "Title",
+            "fr": "Titre",
+            "de": "Titel",
+            "es": "Título"
+          },
+          "placeholder": {
+            "en": "Empty: the application name",
+            "fr": "Vide : le nom de l'application",
+            "de": "Leer: der Name der Anwendung",
+            "es": "Vacío: el nombre de la aplicación"
+          }
+        },
+        {
+          "key": "message",
+          "type": "string",
+          "label": {
+            "en": "Message",
+            "fr": "Message",
+            "de": "Nachricht",
+            "es": "Mensaje"
+          },
           "required": true
+        },
+        {
+          "key": "priority",
+          "type": "select",
+          "label": {
+            "en": "Priority",
+            "fr": "Priorité",
+            "de": "Priorität",
+            "es": "Prioridad"
+          },
+          "default": "default",
+          "options": [
+            {
+              "value": "default",
+              "label": {
+                "en": "Default of the integration",
+                "fr": "Par défaut de l'intégration",
+                "de": "Standard der Integration",
+                "es": "Predeterminada de la integración"
+              }
+            },
+            {
+              "value": "0",
+              "label": {
+                "en": "0 – Minimal, silent",
+                "fr": "0 – Minimale, silencieuse",
+                "de": "0 – Minimal, lautlos",
+                "es": "0 – Mínima, silenciosa"
+              }
+            },
+            {
+              "value": "2",
+              "label": {
+                "en": "2 – Low, silent",
+                "fr": "2 – Basse, silencieuse",
+                "de": "2 – Niedrig, lautlos",
+                "es": "2 – Baja, silenciosa"
+              }
+            },
+            {
+              "value": "5",
+              "label": {
+                "en": "5 – Normal, with sound",
+                "fr": "5 – Normale, avec son",
+                "de": "5 – Normal, mit Ton",
+                "es": "5 – Normal, con sonido"
+              }
+            },
+            {
+              "value": "8",
+              "label": {
+                "en": "8 – High, sound and pop-up",
+                "fr": "8 – Haute, son et bandeau",
+                "de": "8 – Hoch, Ton und Pop-up",
+                "es": "8 – Alta, sonido y aviso emergente"
+              }
+            },
+            {
+              "value": "10",
+              "label": {
+                "en": "10 – Maximum",
+                "fr": "10 – Maximale",
+                "de": "10 – Maximal",
+                "es": "10 – Máxima"
+              }
+            }
+          ]
+        },
+        {
+          "key": "url",
+          "type": "string",
+          "label": {
+            "en": "Link opened on tap",
+            "fr": "Lien ouvert au toucher",
+            "de": "Link beim Antippen",
+            "es": "Enlace al tocar"
+          },
+          "placeholder": {
+            "en": "https://…",
+            "fr": "https://…",
+            "de": "https://…",
+            "es": "https://…"
+          }
+        },
+        {
+          "key": "image_url",
+          "type": "string",
+          "label": {
+            "en": "Image address (Android)",
+            "fr": "Adresse d'une image (Android)",
+            "de": "Bildadresse (Android)",
+            "es": "Dirección de una imagen (Android)"
+          },
+          "placeholder": {
+            "en": "https://…/image.jpg",
+            "fr": "https://…/image.jpg",
+            "de": "https://…/image.jpg",
+            "es": "https://…/image.jpg"
+          }
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
+          "key": "delivered",
           "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "label": {
+            "en": "Notification sent",
+            "fr": "Notification envoyée",
+            "de": "Benachrichtigung gesendet",
+            "es": "Notificación enviada"
+          }
+        },
+        {
+          "key": "message_id",
+          "type": "number",
+          "label": {
+            "en": "Gotify message number",
+            "fr": "Numéro du message Gotify",
+            "de": "Nummer der Gotify-Nachricht",
+            "es": "Número del mensaje Gotify"
+          }
+        },
+        {
+          "key": "error",
+          "type": "string",
+          "label": {
+            "en": "Error",
+            "fr": "Erreur",
+            "de": "Fehler",
+            "es": "Error"
+          }
         }
       ]
     }
   ],
   "widgets": [
     {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
+      "key": "gotify",
+      "label": {
+        "en": "Gotify",
+        "fr": "Gotify",
+        "de": "Gotify",
+        "es": "Gotify"
       },
-      "icon": "activity",
-      "action_timeout_seconds": 15
+      "description": {
+        "en": "Server status, notifications sent today and the last scene notifications.",
+        "fr": "État du serveur, notifications du jour et dernières notifications des scènes.",
+        "de": "Serverstatus, heutige Benachrichtigungen und die letzten Szenen-Benachrichtigungen.",
+        "es": "Estado del servidor, notificaciones de hoy y últimas notificaciones de escenas."
+      },
+      "icon": "bell",
+      "action_timeout_seconds": 30
     }
   ]
 }
