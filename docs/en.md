@@ -1,61 +1,187 @@
-# Demo Devices Template
+# Gotify
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Receive the messages of Gladys on your phone through your own
+[Gotify](https://gotify.net) server, the self-hosted push notification server
+(Android app, web client): the messages of your scenes, the answers of Gladys
+and its system messages, plus notifications with a title, a priority, a link
+and an image from your scenes. Everything stays on your local network.
 
-## What you get
+> **Developed without the hardware: feedback welcome.** This integration was
+> tested against a real Gotify 3.1.1 server, but not with the Gotify phone
+> apps nor in a real Gladys installation. If something does not work as
+> described, please say so on the
+> [Gladys forum](https://community.gladysassistant.com) or in the
+> [issues](https://github.com/guim31/gladys-gotify/issues).
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+## What you need
 
-## Configuration
+- Gladys Assistant 5.1.0 or later.
+- A **Gotify server** that Gladys can reach on your network, for example the
+  `gotify/server` Docker image (tested with Gotify 3.1.1).
+- The **Gotify app** on the phones that receive the notifications (Android,
+  from F-Droid or Google Play), or the Gotify web interface open in a browser.
+  Gotify has no official iOS app.
+- One **application token** per Gotify account that receives messages. In the
+  Gotify web interface, open the **Apps** tab, click **Create application**,
+  name it (Gladys, for instance) and copy its token. An application token
+  sends messages; a **client** token (tab **Clients**) reads them and does not
+  work here.
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+## Set up
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+Install the integration from **Integrations → Install from GitHub** with the
+address `https://github.com/guim31/gladys-gotify`, then fill in its
+Configuration screen:
 
-## Actions
+- **Gotify server address**: the address you open Gotify with, port included,
+  for example `http://192.168.1.10:8080`. A Gotify served under a path behind
+  a reverse proxy (`https://example.org/gotify`) works too.
+- **Shared application token**: used by the scene action, the test, and the
+  users who give no token of their own. Optional if every user fills in
+  "My account".
+- **Default priority**: the priority of the messages that do not set one.
+  _Default of the Gotify application_ leaves it to the application (its
+  default priority is set in the Gotify web interface).
+- **Format messages as Markdown** (on by default): Gladys writes bold text,
+  lists and links in Markdown, and the Gotify apps display them.
+- **Accept a self-signed certificate**: only for an `https://` address whose
+  certificate you created yourself. Leave it off otherwise.
+- **Language of the integration texts**: the note added to a message whose
+  image could not follow, and the errors of the scene action.
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+Then click **Send a test notification**: the integration checks the server
+and sends a notification with the shared token.
 
-## Scenes
+**My account**: each Gladys user, admins and others, decides in the
+"My account" block of the integration's page whether they receive the
+messages Gladys sends them:
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+- **Your application token**: the token of an application of YOUR Gotify
+  account, so that the messages reach your phone only. Leave it empty to use
+  the shared token.
+- **Priority of your messages**: your own priority, or _Default of the
+  integration_.
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+Save at least one of the two: a user who saved nothing receives nothing.
+**Delete my values** stops the messages.
+
+## What Gladys sends
+
+Every message Gladys sends to a user goes through Gotify when that user saved
+"My account": the **Send Message** scene action, the answers of Gladys, and
+its system messages (Gladys updated, backup failed, low battery…). In the
+**Send Message** action, recent versions of Gladys let you pick the channel:
+all channels, only Gotify, or Gladys only.
+
+- The text is sent as Markdown, without a title: Gotify shows the name of the
+  application instead.
+- Gotify carries no attachment: the image of **Send a camera image** is left
+  out, and a line says so under the text.
+- The priority is the one of "My account", or the default priority.
+
+What the priority does on the Gotify Android app:
+
+| Priority | Notification                                  |
+| -------- | --------------------------------------------- |
+| 0        | minimal: silent, no icon in the status bar    |
+| 1 to 3   | low: silent                                   |
+| 4 to 7   | normal: with sound                            |
+| 8 to 10  | high: with sound and a pop-up over other apps |
+
+The web client and the other apps may show priorities differently.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+The **Gotify** widget shows:
+
+- whether the server answers, and its version;
+- the notifications sent today, and the failures with the last reason;
+- the last notifications sent by **scenes** (title, date, priority, or "Not
+  sent"). A tap opens the full text. The messages Gladys sends to one user are
+  counted but never listed: the dashboard is seen by the whole household;
+- a **Send a test** button, which does the same as the configuration test.
+
+## Scenes
+
+### Triggers
+
+- **Gotify server offline**: the server stopped answering. It must fail two
+  checks 30 seconds apart (a check runs every 5 minutes, and right after a
+  failed delivery). Variable: the error.
+- **Gotify server back online**: the server answers again after being offline.
+  Variable: the Gotify version.
+- **Gotify notification not sent**: a message could not be sent. Filters: the
+  reason (server unreachable, token missing or refused, configuration
+  incomplete, message refused) and who sent it (a Gladys message or the Gotify
+  scene action). Variables: reason, origin, error. To avoid loops, it fires at
+  most once per reason every 15 minutes.
+
+The first state known after the installation, or after changing the address,
+is not announced: only a change is.
+
+### Actions
+
+**Send a Gotify notification**, with the shared token:
+
+- **Title** (optional): the name of the application otherwise.
+- **Message** (required): Markdown when the option is on. Scene variables
+  work here, as in every field.
+- **Priority**: one of the list, or _Default of the integration_.
+- **Link opened on tap** (optional): an `http://` or `https://` address the
+  phone opens when you tap the notification.
+- **Image address (Android)** (optional): an `https://` image shown in the
+  expanded notification of the Android app. Your phone downloads it: it must
+  be reachable from the phone, not only from Gladys.
+
+The action gives three values to the next actions of the scene:
+**Notification sent** (yes / no), **Gotify message number** and **Error**
+(empty when sent). A wrong field (an empty message, a link that is not
+`http(s)`) fails the action, and the scene log says why.
+
+### Scene ideas
+
+- **Alarm**: when the alarm goes off, **Send a Gotify notification** titled
+  "Alarm", priority 8, with a link to your camera page.
+- **Fallback**: on **Gotify notification not sent** with the reason "Server
+  unreachable", send the message through another channel (SMS, e-mail). Do not
+  answer it with another Gotify notification.
+- **Watch the server**: on **Gotify server offline**, turn a lamp red; on
+  **Gotify server back online**, turn it off.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+The Configuration screen shows the state of the server. The messages:
+
+- _the Gotify server does not answer_: check the address and the port, and
+  that the Gotify container is running. Gladys runs the integration in its own
+  Docker network: `localhost` is the integration itself, use the IP address
+  of the machine.
+- _certificate refused_: tick **Accept a self-signed certificate**, or use
+  the `http://` address on your local network.
+- _the address redirects_: Gotify answered with a redirection, usually from
+  `http://` to `https://`. Enter the `https://` address.
+- _no Gotify server at this address_: another service answers there.
+- _application token refused by Gotify_: the token is wrong, or the
+  application was deleted in Gotify.
+- _this is a client token_: copy the token from the **Apps** tab, not from
+  the **Clients** tab.
+- _no application token_: neither "My account" nor the configuration has one.
+
+A user receives nothing? Check that they saved "My account", and that the
+**Send Message** action of the scene does not send to another channel only.
+The logs of the integration (Integrations → Gotify → Logs) give the details;
+they never show a token.
+
+## Limits
+
+- **Send only**: Gotify has no replies. You cannot talk to Gladys from
+  Gotify.
+- No images nor files in messages: Gotify carries text only. The scene action
+  can show an image from an address (Android only).
+- The Gladys messages have no title of their own.
+- Tested against a real Gotify 3.1.1 server, but not with the phone apps nor
+  in a real Gladys.
+- Gotify does not limit the number of messages; your phone may group or
+  silence a flood of notifications.
+
+This integration is not affiliated with the Gotify project.

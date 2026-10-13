@@ -30,6 +30,21 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- **Secrets**: the shared application token (integration configuration) and the
+  application token of each user ("My account"). Gladys stores them and hands
+  them to the integration; the integration keeps them in memory only, sends
+  them to the configured Gotify server in the `X-Gotify-Key` header, and never
+  logs them nor writes them to disk.
+- **`/data`**: `gotify-state.json` holds the last known state of the server
+  (online / offline, version, a hash of its address), today's delivery counters
+  and the last notifications sent by scenes (title and text). No token, no
+  address, and never the messages Gladys sends to one user.
+- **Network**: outgoing HTTP(S) requests to the Gotify server address typed in
+  the configuration only. Certificates are verified unless "Accept a
+  self-signed certificate" is ticked. Nothing listens for incoming connections.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+and Gotify itself (see the [Gotify project](https://github.com/gotify/server)).

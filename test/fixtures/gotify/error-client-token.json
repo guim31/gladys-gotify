@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "body": {
+    "error": "Bad Request",
+    "errorCode": 400,
+    "errorDescription": "appid is required when not authenticating with an application token"
+  }
+}

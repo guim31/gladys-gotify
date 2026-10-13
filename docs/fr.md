@@ -1,67 +1,201 @@
-# Template de démonstration
+# Gotify
 
-Ceci est la documentation utilisateur de l'intégration. Gladys ré-héberge ce
-fichier et affiche un lien **Documentation** permanent vers lui dans l'écran
-de configuration (dans la langue de l'utilisateur, avec l'anglais en repli) —
-c'est au moment de configurer que l'utilisateur en a le plus besoin. Gardez
-les courtes indications d'accueil dans les blocs `section` du `config_schema`
-du manifest ; mettez ici le pas-à-pas détaillé (captures d'écran, dépannage…).
+Recevez les messages de Gladys sur votre téléphone via votre propre serveur
+[Gotify](https://gotify.net), le serveur de notifications push auto-hébergé
+(application Android, client web) : les messages de vos scènes, les réponses
+de Gladys et ses messages système, ainsi que des notifications avec titre,
+priorité, lien et image depuis vos scènes. Tout reste sur votre réseau local.
 
-## Ce que vous obtenez
+> **Développée sans le matériel : vos retours sont bienvenus.** Cette
+> intégration a été testée contre un vrai serveur Gotify 3.1.1, mais ni avec
+> les applications Gotify pour téléphone, ni dans une vraie installation de
+> Gladys. Si quelque chose ne fonctionne pas comme décrit, dites-le sur le
+> [forum de Gladys](https://community.gladysassistant.com) ou dans les
+> [issues](https://github.com/guim31/gladys-gotify/issues).
 
-Six appareils de démonstration apparaissent après l'installation : une
-station météo (vraies données Open-Meteo), un interrupteur, une lampe
-variable, une prise connectée avec mesure de puissance, un détecteur de
-mouvement et une caméra.
+## Ce qu'il vous faut
+
+- Gladys Assistant 5.1.0 ou plus récent.
+- Un **serveur Gotify** que Gladys peut joindre sur votre réseau, par exemple
+  l'image Docker `gotify/server` (testé avec Gotify 3.1.1).
+- L'**application Gotify** sur les téléphones qui reçoivent les notifications
+  (Android, depuis F-Droid ou Google Play), ou l'interface web de Gotify
+  ouverte dans un navigateur. Gotify n'a pas d'application iOS officielle.
+- Un **jeton d'application** par compte Gotify qui reçoit des messages. Dans
+  l'interface web de Gotify, ouvrez l'onglet **Apps**, cliquez sur **Create
+  application**, nommez-la (Gladys, par exemple) et copiez son jeton. Un jeton
+  d'application envoie des messages ; un jeton **client** (onglet **Clients**)
+  les lit et ne fonctionne pas ici.
 
 ## Configuration
 
-1. Ouvrez l'onglet **Configuration** de l'intégration.
-2. Renseignez la **latitude** et la **longitude** que la station météo de
-   démonstration doit observer (Paris par défaut), et choisissez votre unité
-   de température. L'**intervalle de rafraîchissement** règle la fréquence
-   de lecture de la station météo et de la puissance de la prise : toutes
-   les 5 minutes par défaut, toutes les minutes au plus.
-3. Enregistrez : les appareils apparaissent dans l'onglet **Découverte**,
-   prêts à être ajoutés.
+Installez l'intégration depuis **Intégrations → Installer depuis GitHub** avec
+l'adresse `https://github.com/guim31/gladys-gotify`, puis remplissez son écran
+de configuration :
 
-Le réglage **Préférer la connexion locale** pilote la prise de
-démonstration : elle affiche en badge le canal réellement utilisé (local ou
-cloud), avec un point orange quand elle fonctionne en mode dégradé (local
-refusé, bascule cloud).
+- **Adresse du serveur Gotify** : l'adresse par laquelle vous ouvrez Gotify,
+  port compris, par exemple `http://192.168.1.10:8080`. Un Gotify servi sous
+  un chemin derrière un proxy inverse (`https://example.org/gotify`) convient
+  aussi.
+- **Jeton d'application partagé** : utilisé par l'action de scène, le test et
+  les utilisateurs qui n'ont pas donné leur propre jeton. Facultatif si chaque
+  utilisateur remplit « Mon compte ».
+- **Priorité par défaut** : la priorité des messages qui n'en fixent pas.
+  _Par défaut de l'application Gotify_ la laisse à l'application (sa priorité
+  par défaut se règle dans l'interface web de Gotify).
+- **Mettre en forme les messages en Markdown** (activé par défaut) : Gladys
+  écrit gras, listes et liens en Markdown, et les applications Gotify les
+  affichent.
+- **Accepter un certificat auto-signé** : seulement pour une adresse en
+  `https://` dont vous avez créé le certificat vous-même. Sinon, laissez
+  désactivé.
+- **Langue des textes de l'intégration** : la mention ajoutée à un message
+  dont l'image n'a pas pu suivre, et les erreurs de l'action de scène.
 
-## Actions
+Cliquez ensuite sur **Envoyer une notification de test** : l'intégration
+vérifie le serveur et envoie une notification avec le jeton partagé.
 
-- **Tester le fournisseur météo** — effectue une requête en direct vers
-  Open-Meteo et affiche la température et l'humidité actuelles sous le
-  bouton.
-- **Identifier un appareil** — choisissez un de vos appareils dans la liste
-  et il se signale (la lampe de démonstration « clignote » dans les logs).
+**Mon compte** : chaque utilisateur de Gladys, administrateur ou non, décide
+dans le bloc « Mon compte » de la page de l'intégration s'il reçoit les
+messages que Gladys lui envoie :
 
-## Scènes
+- **Votre jeton d'application** : le jeton d'une application de VOTRE compte
+  Gotify, pour que les messages n'arrivent que sur votre téléphone. Laissez
+  vide pour utiliser le jeton partagé.
+- **Priorité de vos messages** : votre propre priorité, ou _Par défaut de
+  l'intégration_.
 
-L'intégration ajoute ses propres cartes à l'éditeur de scènes (Gladys 5.1
-ou plus récent), dans la catégorie **Intégrations** :
+Enregistrez au moins l'un des deux : un utilisateur qui n'a rien enregistré ne
+reçoit rien. **Effacer mes valeurs** arrête les messages.
 
-- **Mouvement détecté** (déclencheur) — lance la scène quand un détecteur
-  de démonstration voit bouger quelque chose. Choisissez éventuellement le
-  détecteur et ce qui a bougé (personne, animal) ; laissés vides, toute
-  détection correspond. Les actions suivantes peuvent lire ce qui a bougé
-  avec `{{triggerEvent.data.target}}`.
-- **Identifier un appareil** (action) — fait se signaler l'appareil choisi.
-  Elle indique si l'appareil a pu se signaler, pour que les actions
-  suivantes puissent en dépendre.
+## Ce que Gladys envoie
+
+Chaque message que Gladys envoie à un utilisateur passe par Gotify quand cet
+utilisateur a enregistré « Mon compte » : l'action de scène **Envoyer un
+message**, les réponses de Gladys et ses messages système (Gladys mise à jour,
+sauvegarde échouée, pile faible…). Dans l'action **Envoyer un message**, les
+versions récentes de Gladys permettent de choisir le canal : tous les canaux,
+seulement Gotify, ou Gladys seulement.
+
+- Le texte part en Markdown, sans titre : Gotify affiche à la place le nom de
+  l'application.
+- Gotify ne transporte pas de pièce jointe : l'image d'**Envoyer une image de
+  caméra** est laissée de côté, et une ligne le signale sous le texte.
+- La priorité est celle de « Mon compte », sinon la priorité par défaut.
+
+Ce que fait la priorité sur l'application Android de Gotify :
+
+| Priorité | Notification                                            |
+| -------- | ------------------------------------------------------- |
+| 0        | minimale : silencieuse, sans icône dans la barre d'état |
+| 1 à 3    | basse : silencieuse                                     |
+| 4 à 7    | normale : avec son                                      |
+| 8 à 10   | haute : avec son et un bandeau par-dessus les applis    |
+
+Le client web et les autres applications peuvent traiter les priorités
+autrement.
 
 ## Tableau de bord
 
-Ajoutez le widget **État de la démo** à un tableau de bord : il affiche en
-direct la température de la station météo et la puissance de la prise du
-bureau, la connexion utilisée par la prise (en orange si dégradée) et la
-position observée. Son bouton **Identifier la lampe** fait se signaler la
-lampe de démonstration.
+Le widget **Gotify** affiche :
+
+- si le serveur répond, et sa version ;
+- les notifications envoyées aujourd'hui, et les échecs avec la dernière
+  raison ;
+- les dernières notifications envoyées par des **scènes** (titre, date,
+  priorité, ou « Non envoyée »). Un appui ouvre le texte complet. Les messages
+  que Gladys envoie à un seul utilisateur sont comptés mais jamais listés : le
+  tableau de bord est vu par toute la maison ;
+- un bouton **Envoyer un test**, qui fait la même chose que le test de la
+  configuration.
+
+## Scènes
+
+### Déclencheurs
+
+- **Serveur Gotify hors ligne** : le serveur ne répond plus. Il doit échouer à
+  deux vérifications à 30 secondes d'écart (une vérification a lieu toutes les
+  5 minutes, et juste après un envoi échoué). Variable : l'erreur.
+- **Serveur Gotify de retour** : le serveur répond de nouveau après avoir été
+  hors ligne. Variable : la version de Gotify.
+- **Notification Gotify non envoyée** : un message n'a pas pu être envoyé.
+  Filtres : la raison (serveur injoignable, jeton absent ou refusé,
+  configuration incomplète, message refusé) et qui l'a envoyé (un message de
+  Gladys ou l'action de scène Gotify). Variables : raison, origine, erreur.
+  Pour éviter les boucles, il se déclenche au plus une fois par raison toutes
+  les 15 minutes.
+
+Le premier état connu après l'installation, ou après un changement d'adresse,
+n'est pas annoncé : seul un changement l'est.
+
+### Actions
+
+**Envoyer une notification Gotify**, avec le jeton partagé :
+
+- **Titre** (facultatif) : sinon, le nom de l'application.
+- **Message** (obligatoire) : en Markdown quand l'option est activée. Les
+  variables de scène fonctionnent ici, comme dans tous les champs.
+- **Priorité** : une de la liste, ou _Par défaut de l'intégration_.
+- **Lien ouvert au toucher** (facultatif) : une adresse en `http://` ou
+  `https://` que le téléphone ouvre quand vous touchez la notification.
+- **Adresse d'une image (Android)** (facultative) : une image en `https://`
+  affichée dans la notification dépliée de l'application Android. Votre
+  téléphone la télécharge : elle doit être joignable depuis le téléphone, pas
+  seulement depuis Gladys.
+
+L'action transmet trois valeurs aux actions suivantes de la scène :
+**Notification envoyée** (oui / non), **Numéro du message Gotify** et
+**Erreur** (vide en cas d'envoi). Un champ incorrect (message vide, lien qui
+n'est pas en `http(s)`) fait échouer l'action, et le journal de la scène dit
+pourquoi.
+
+### Idées de scènes
+
+- **Alarme** : quand l'alarme se déclenche, **Envoyer une notification
+  Gotify** intitulée « Alarme », priorité 8, avec un lien vers la page de
+  votre caméra.
+- **Secours** : sur **Notification Gotify non envoyée** avec la raison
+  « Serveur injoignable », envoyez le message par un autre canal (SMS,
+  e-mail). N'y répondez pas par une autre notification Gotify.
+- **Surveiller le serveur** : sur **Serveur Gotify hors ligne**, passez une
+  lampe en rouge ; sur **Serveur Gotify de retour**, éteignez-la.
 
 ## Dépannage
 
-L'intégration journalise tout ce qu'elle fait : consultez les logs de
-l'intégration depuis l'interface Gladys (ou `docker logs` sur l'hôte) avec
-`LOG_LEVEL=debug` pour le détail complet.
+L'écran de configuration affiche l'état du serveur. Les messages :
+
+- _le serveur Gotify ne répond pas_ : vérifiez l'adresse et le port, et que le
+  conteneur Gotify tourne. Gladys fait tourner l'intégration dans son propre
+  réseau Docker : `localhost` désigne l'intégration elle-même, utilisez
+  l'adresse IP de la machine.
+- _certificat refusé_ : cochez **Accepter un certificat auto-signé**, ou
+  utilisez l'adresse en `http://` sur votre réseau local.
+- _l'adresse redirige_ : Gotify a répondu par une redirection, en général de
+  `http://` vers `https://`. Saisissez l'adresse en `https://`.
+- _aucun serveur Gotify à cette adresse_ : un autre service y répond.
+- _jeton d'application refusé par Gotify_ : le jeton est faux, ou
+  l'application a été supprimée dans Gotify.
+- _c'est un jeton client_ : copiez le jeton depuis l'onglet **Apps**, pas
+  depuis l'onglet **Clients**.
+- _aucun jeton d'application_ : ni « Mon compte » ni la configuration n'en
+  ont.
+
+Un utilisateur ne reçoit rien ? Vérifiez qu'il a enregistré « Mon compte », et
+que l'action **Envoyer un message** de la scène n'envoie pas seulement vers un
+autre canal. Les logs de l'intégration (Intégrations → Gotify → Logs) donnent
+les détails ; ils n'affichent jamais de jeton.
+
+## Limites
+
+- **Envoi seulement** : Gotify n'a pas de réponse. Vous ne pouvez pas parler à
+  Gladys depuis Gotify.
+- Ni image ni fichier dans les messages : Gotify ne transporte que du texte.
+  L'action de scène peut afficher une image depuis une adresse (Android
+  seulement).
+- Les messages de Gladys n'ont pas de titre propre.
+- Testée contre un vrai serveur Gotify 3.1.1, mais ni avec les applications
+  pour téléphone, ni dans une vraie installation de Gladys.
+- Gotify ne limite pas le nombre de messages ; votre téléphone peut regrouper
+  ou rendre silencieuse une avalanche de notifications.
+
+Cette intégration n'est pas affiliée au projet Gotify.

@@ -32,15 +32,20 @@ pushing.
 
 ```
 index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
-src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
+src/app.js                        the integration: onSendMessage, scene action, action, widget,
+                                  health checks every 5 min, online/offline/failed triggers
+src/gotify/client.js              Gotify REST client (/version, /health, /message), error kinds
+src/gotify/http.js                node:http(s) transport (self-signed per request, no redirects)
+src/gotify/message.js             Gladys message / scene fields -> body of POST /message
+src/history.js                    server state + today's counters + last scene notifications
+src/store.js                      atomic JSON file under /data
+src/widgets.js                    content of the "gotify" widget
+src/texts.js                      texts sent to Gladys, in en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+gladys-assistant-integration.json manifest: communication type, send-only, contact_schema...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys, same sections
+test/                             node --test, against the SDK's fake Gladys and a fake Gotify
+test/fixtures/gotify/             real answers of a Gotify 3.1.1 server
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +75,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, manifest texts, widget texts, and `docs/en.md`, `docs/fr.md`,
+  `docs/de.md`, `docs/es.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -177,6 +183,45 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
 - Les filtres de scène ne font qu'égalité et appartenance : un seuil reste le travail d'un capteur.
 - **Les clés de widgets, de déclencheurs et d'actions sont figées une fois publiées.**
 - `gladys_version` `>=5.1.0` dès qu'il y a widgets, déclencheurs ou actions de scène.
+
+## Gotify (propre à ce dépôt)
+
+- **Intégration `communication`, envoi seul** (`messaging.receive: false`) : pas d'appareil, pas
+  de découverte. Le cœur appelle `onSendMessage(contact, { text, file })` avec les valeurs
+  « Mon compte » (`contact_schema`) de l'utilisateur visé ; un utilisateur qui n'a **rien**
+  enregistré est sauté par le cœur et n'arrive jamais ici. Spec : `capabilities/communication-type.md`,
+  présent dès la 5.1.0 (vérifié par `git show v5.1.0:…validateManifest.js`).
+- **Le formulaire « Mon compte » n'applique aucun `default`** (`ExternalIntegrationPage`/`config-page`
+  de la 5.2.0 : valeurs initiales `null`) et un booléen non coché y est enregistré `false`. D'où un
+  `contact_schema` sans défaut ni booléen : un jeton facultatif, une priorité facultative ; il
+  suffit d'enregistrer l'un des deux pour recevoir. Un `secret` laissé intact est envoyé `null`
+  (« inchangé »). Mais un jeton **vidé** est enregistré `''` et le cœur relaie quand même
+  (`{ app_token: '' }` n'est pas un profil vide) : sans jeton ni priorité choisie, l'utilisateur
+  s'est désinscrit, `onSendMessage` ne fait rien (`normalizeContact().optedIn`).
+- **Course à la reconfiguration** : un contrôle de santé capture son client et son adresse, et
+  revérifie la génération après chaque `await` (dont `setConnectionStatus`) ; sinon un contrôle de
+  l'ancien serveur marquait le nouveau « en ligne » (relecture du 13/10, test dédié).
+- **L'accusé de `message.send` est attendu 5 s** (`COMMAND_TIMEOUT_MS`) : la requête vers Gotify
+  abandonne à 4 s (délai total, pas seulement d'inactivité), et le déclencheur `delivery_failed`
+  d'un message n'est pas attendu. `text` est du Markdown (écrit par le cerveau / l'IA), `file` une image
+  `image/jpg;base64,…` que Gotify ne peut pas porter : on l'écarte avec une ligne qui le dit.
+- **API Gotify** (vérifiée sur 3.1.1, fixtures dans `test/fixtures/gotify/`) : `POST /message`
+  avec `X-Gotify-Key` ; sans `priority`, Gotify applique la priorité par défaut de l'application ;
+  sans `title`, le nom de l'application. La priorité n'est pas bornée côté serveur (11 et -1
+  acceptés) : on borne à 0-10. `message` vide → 400 `Field 'message' is required`. Un **jeton
+  client** (`gtfyc.…`) sur `POST /message` → 400 `appid is required…` : détecté et expliqué. Jeton
+  inconnu → 401. `GET /health` et `GET /version` sont publics : la surveillance n'utilise aucun
+  jeton. Un jeton d'application ne permet aucune lecture : le seul test d'un jeton est un envoi.
+- **Niveaux Android** (`NotificationSupport.convertPriorityToChannel` de gotify/android) : < 1
+  minimal, 1-3 bas (silencieux), 4-7 normal (son), ≥ 8 haut (bandeau).
+- `new URL()` garde toujours un `pathname` « / » : joindre le préfixe sans sa barre finale, sinon
+  `//message` → 404 (bug attrapé par les tests).
+- **Déclencheurs** : en ligne / hors ligne sur transition seulement (deux échecs à 30 s d'écart),
+  état persisté dans `/data` pour ne rien répéter au redémarrage, oublié quand l'adresse change ;
+  `delivery_failed` au plus une fois par raison toutes les 15 min (une scène qui y répondrait par
+  une notification Gotify ne boucle pas).
+- **Vie privée du widget** : seules les notifications des scènes sont listées ; les messages à un
+  utilisateur sont comptés, jamais affichés (le tableau de bord est commun).
 
 ## Store
 
