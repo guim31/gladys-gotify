@@ -39,6 +39,7 @@ src/gotify/http.js                node:http(s) transport (self-signed per reques
 src/gotify/message.js             Gladys message / scene fields -> body of POST /message
 src/history.js                    server state + today's counters + last scene notifications
 src/store.js                      atomic JSON file under /data
+src/log.js                        repeated failures logged once (start, recovery)
 src/widgets.js                    content of the "gotify" widget
 src/texts.js                      texts sent to Gladys, in en/fr/de/es
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
@@ -220,6 +221,17 @@ code de ce dépôt. Compléter ce fichier quand un nouveau piège est découvert
   état persisté dans `/data` pour ne rien répéter au redémarrage, oublié quand l'adresse change ;
   `delivery_failed` au plus une fois par raison toutes les 15 min (une scène qui y répondrait par
   une notification Gotify ne boucle pas).
+- **Polling (Gladys#3198)** : sans objet ici, aucun appareil publié ni `onPoll`. Le cœur 5.2.0
+  ne sonde qu'un appareil `should_poll: true` avec un `poll_frequency` valide, et les appareils
+  **déjà créés** sans `should_poll` ne seront jamais sondés, même après le correctif (#3199) : la
+  surveillance de Gotify tourne sur son propre minuteur (5 min, revérification à 30 s). Si un
+  appareil apparaît un jour, garder ce minuteur et n'ajouter `onPoll` qu'en repli
+  (`test/logs.test.js` vérifie qu'aucun `onPoll` n'est requis).
+- **Logs** : en `info`, le cycle de vie seulement (démarrage, Gotify joint / perdu / revenu).
+  Contrôles de santé en `debug`, envois réussis sans log. Les échecs répétés (serveur arrêté, statut refusé par
+  Gladys, `/data` non inscriptible) passent par `createFailureLog` (`src/log.js`) : une ligne au
+  premier échec, une au rétablissement. `test/logs.test.js` capture `console.log`/`console.error`
+  (le logger du SDK) et vérifie qu'un cycle normal n'écrit rien en `info` ni aucun jeton.
 - **Vie privée du widget** : seules les notifications des scènes sont listées ; les messages à un
   utilisateur sont comptés, jamais affichés (le tableau de bord est commun).
 

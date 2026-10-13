@@ -10,6 +10,13 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+### Changed
+
+- Quieter logs: a Gotify server that stays down, a status Gladys refuses or an
+  unwritable data volume are logged once when the problem starts and once when
+  it ends, instead of at every check. The integration now says at start-up
+  whether it reached Gotify.
+
 ## [1.0.0] - 2026-10-13
 
 ### Added
